@@ -12,14 +12,14 @@ excel形式でのレポート作成用ライブラリです。
 
 ## Requirement
 
-- openxlsx 4.1.3
-- stringr 1.4.0
+- [openxlsx 4.1.3](https://www.rdocumentation.org/packages/openxlsx/versions/4.1.3)
+- [stringr 1.4.0](https://github.com/tidyverse/stringr)
 
 ---
 
 ## Reference
 
-### `excel_reporting_manager$updateReports(wb, raw_data)`
+#### `excel_reporting_manager$updateReports(wb, raw_data)`
 
 説明
 
@@ -30,7 +30,7 @@ Workbookオブジェクトにレポートを追加します。
 - *wb* : Workbookオブジェクト
 - *raw_data* : 元データ
 
-### `excel_reporting_manager$addSummaryReport(metric, calculated_values, segment_column)`
+#### `excel_reporting_manager$addSummaryReport(metric, calculated_values, segment_column)`
 
 説明
 
@@ -95,7 +95,7 @@ report.xlsx
 | total	| 105 | 60	| 1.75 |
 
 
-### `excel_reporting_manager$addDuringReport(metric, calculated_values, during_list, filter_column)`
+#### `excel_reporting_manager$addDuringReport(metric, calculated_values, during_list, filter_column)`
 
 説明
 
