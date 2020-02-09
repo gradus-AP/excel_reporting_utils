@@ -38,9 +38,9 @@ Workbookオブジェクトにレポートを追加します。
 
 引数 
 
-- *metric* : 合計対象の列
-- *calculated_values* : 計算指標の
-- *segment_column* : セグメントに利用する列
+- *metric* : (必須)合計対象の列名を指定します。
+- *calculated_values* : (省略可)計算指標を指定します。
+- *segment_column* : (省略可)セグメント別に分ける識別子に用いる列名を指定します。
 
 ```r
 source('./excel_reporting_utils/excel_reporting_manager.R', encoding="utf-8")
@@ -70,7 +70,7 @@ erm$addSummaryReport(
     metric=c('session', 'users'),
     calculated_values=list(
         'session_per_user'=function(row) {
-            return(str_glue('=IFERROR(B{row} / C{row}, "-")'))
+            return(stringr::str_glue('=IFERROR(B{row} / C{row}, "-")'))
         }
     ),
     segment_column='referer'
@@ -83,6 +83,7 @@ wb <- openxlsx::createWorkbook()
 
 erm$updateReports(wb, access)
 openxlsx::saveWorkbook(wb, 'report.xlsx', overwrite = TRUE)
+
 ```
 
 report.xlsx 
@@ -94,7 +95,6 @@ report.xlsx
 | yahoo	| 35 | 	20 | 1.75 |
 | total	| 105 | 60	| 1.75 |
 
-
 #### `excel_reporting_manager$addDuringReport(metric, calculated_values, during_list, filter_column)`
 
 説明
@@ -103,10 +103,10 @@ report.xlsx
 
 引数
 
-- *metric* : 合計対象の列
-- *calculated_values* : 計算指標
-- *during_list* : 期間
-- *filter_column* : フィルターに使用する列
+- *metric* : (必須)合計対象の列名を指定します。
+- *calculated_values* : (省略可)計算指標を指定します。
+- *during_list* : (必須) 集計期間を指定します。
+- *filter_column* : (省略可)フィルターに使用する列名を指定します。
 
 ```r
 source('./excel_reporting_utils/excel_reporting_manager.R', encoding="utf-8")
@@ -136,7 +136,7 @@ erm$addDuringReport(
     metric=c('session'),
     calculated_values=list(
         'accumulation_session'=function(row) {
-            return(str_glue('=IFERROR(SUM(B3:B{row}), "-")'))
+            return(stringr::str_glue('=IFERROR(SUM(B3:B{row}), "-")'))
         }
     ),
     during_list=list(
@@ -183,4 +183,4 @@ git clone https://github.com/gradus-AP/excel_reporting_utils.git
 
 ## License
 
-google_analytics_reporting under [MIT license](https://en.wikipedia.org/wiki/MIT_License), see LICENSE.txt.
+excel_reporting_utils under [MIT license](https://en.wikipedia.org/wiki/MIT_License), see LICENSE.txt.

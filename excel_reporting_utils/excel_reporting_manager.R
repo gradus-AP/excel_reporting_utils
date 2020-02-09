@@ -1,6 +1,5 @@
 #'-------------------------------------------------------------------------------
 #' @description excel形式でレポート出力
-#' @example 
 #' @author masaya.genshin@gmail.com
 #'-------------------------------------------------------------------------------
 excel_reporting_manager <- function() {
@@ -34,15 +33,19 @@ excel_reporting_manager <- function() {
     }
     
     # サマリーレポートを作成する
-    addSummaryReport <- function(metric, calculated_values, segment_column) {
+    addSummaryReport <- function(metric, calculated_values=list(), segment_column=NULL) {
         updateSummaryReport <- function(wb, raw_data) {
             if(!('summary' %in% names(wb))) {
                 openxlsx::addWorksheet(wb, 'summary')
             }
             raw_data.ROWS <- nrow(raw_data)
             calculated_columns <- names(calculated_values)
-            # セグメント識別子
-            segment_id_list <- as.character(sort(unlist(unique(raw_data[,MAPPING[[segment_column]]]))))
+            
+            segment_id_list <- NULL
+            if (!is.null(segment_column)) {
+                # セグメント識別子(リスト)
+                segment_id_list <- as.character(sort(unlist(unique(raw_data[,MAPPING[[segment_column]]]))))
+            }
             segment_id_list <- c(segment_id_list, 'total')
             
             #タイトル
@@ -55,8 +58,12 @@ excel_reporting_manager <- function() {
             formula_list <- function(row) {
                 return(
                     append(
-                        lapply(COLUMNS[metric], function(column){
-                            return(stringr::str_glue('=SUMIFS(raw_data!{column}$2:{column}${raw_data.ROWS + 1}, raw_data!${COLUMNS[[segment_column]]}2:${COLUMNS[[segment_column]]}{raw_data.ROWS + 1},  IF($A{row}="total", "*", $A{row}))'))
+                        lapply(COLUMNS[metric], function(column) {
+                            if (!is.null(segment_column)) {
+                                return(stringr::str_glue('=SUMIFS(raw_data!{column}$2:{column}${raw_data.ROWS + 1}, raw_data!${COLUMNS[[segment_column]]}2:${COLUMNS[[segment_column]]}{raw_data.ROWS + 1},  IF($A{row}="total", "*", $A{row}))'))
+                            } else {
+                                return(stringr::str_glue('=SUM(raw_data!{column}$2:{column}${raw_data.ROWS + 1})'))
+                            }
                         }), 
                         lapply(calculated_values, function(fml) {
                             return(fml(row))
@@ -77,7 +84,7 @@ excel_reporting_manager <- function() {
     }
     
     # 期間レポートを作成する
-    addDuringReport <- function(metric, calculated_values, during_list, filter_column) {
+    addDuringReport <- function(metric, calculated_values=list(), during_list, filter_column=NULL) {
         updateDuringReport <- function(wb, raw_data) {
             if(!('transition' %in% names(wb))) {
                 openxlsx::addWorksheet(wb, 'transition')
@@ -94,7 +101,11 @@ excel_reporting_manager <- function() {
                 return(
                     append(
                         lapply(COLUMNS[metric], function(column){
-                            return(stringr::str_glue('=SUMIFS(raw_data!{column}$2:{column}${raw_data.ROWS + 1}, raw_data!${COLUMNS$date}2:${COLUMNS$date}{raw_data.ROWS + 1},">= " & LEFT($A{row},8), raw_data!${COLUMNS$date}2:${COLUMNS$date}{raw_data.ROWS + 1},"<= " & RIGHT($A{row},8), raw_data!${COLUMNS[[filter_column]]}2:${COLUMNS[[filter_column]]}{raw_data.ROWS + 1},  IF($B$1="total", "*", $B$1))'))
+                            if (!is.null(filter_column)) {
+                                return(stringr::str_glue('=SUMIFS(raw_data!{column}$2:{column}${raw_data.ROWS + 1}, raw_data!${COLUMNS$date}2:${COLUMNS$date}{raw_data.ROWS + 1},">= " & LEFT($A{row},8), raw_data!${COLUMNS$date}2:${COLUMNS$date}{raw_data.ROWS + 1},"<= " & RIGHT($A{row},8), raw_data!${COLUMNS[[filter_column]]}2:${COLUMNS[[filter_column]]}{raw_data.ROWS + 1},  IF($B$1="total", "*", $B$1))'))
+                            } else {
+                                return(stringr::str_glue('=SUMIFS(raw_data!{column}$2:{column}${raw_data.ROWS + 1}, raw_data!${COLUMNS$date}2:${COLUMNS$date}{raw_data.ROWS + 1},">= " & LEFT($A{row},8), raw_data!${COLUMNS$date}2:${COLUMNS$date}{raw_data.ROWS + 1},"<= " & RIGHT($A{row},8))'))
+                            }
                         }), 
                         lapply(calculated_values, function(fml) {
                             return(fml(row))
