@@ -32,6 +32,14 @@ excel_reporting_manager <- function() {
         names(COLUMNS) <<- names(mapping)
     }
     
+    # xlsxのsum関数を作成する
+    xlsx.SUMIFS <- function(target, filters=NULL) {
+        params <- Reduce(
+            function(acc, cur) paste0(acc, ', ', cur[1], ', ', cur[2])
+            , x=filters, init=target)
+        return(stringr::str_glue('{ifelse(is.null(filters), "=SUM(", "=SUMIFS(")}{params})'))
+    }
+    
     # サマリーレポートを作成する
     addSummaryReport <- function(metric, calculated_values=list(), segment_column=NULL) {
         updateSummaryReport <- function(wb, raw_data) {
@@ -59,11 +67,11 @@ excel_reporting_manager <- function() {
                 return(
                     append(
                         lapply(COLUMNS[metric], function(column) {
-                            if (!is.null(segment_column)) {
-                                return(stringr::str_glue('=SUMIFS(raw_data!{column}$2:{column}${raw_data.ROWS + 1}, raw_data!${COLUMNS[[segment_column]]}2:${COLUMNS[[segment_column]]}{raw_data.ROWS + 1},  IF($A{row}="total", "*", $A{row}))'))
-                            } else {
-                                return(stringr::str_glue('=SUM(raw_data!{column}$2:{column}${raw_data.ROWS + 1})'))
+                            filters <- NULL
+                            if(!is.null(segment_column)) {
+                                filters <- list(c('raw_data!${COLUMNS[[segment_column]]}2:${COLUMNS[[segment_column]]}{raw_data.ROWS + 1}', 'IF($A{row}="total", "*", $A{row})'))
                             }
+                            return(stringr::str_glue(xlsx.SUMIFS('raw_data!{column}$2:{column}${raw_data.ROWS + 1}', filters)))
                         }), 
                         lapply(calculated_values, function(fml) {
                             return(fml(row))
@@ -101,11 +109,14 @@ excel_reporting_manager <- function() {
                 return(
                     append(
                         lapply(COLUMNS[metric], function(column){
+                            filters <- list(
+                                c('raw_data!${COLUMNS$date}2:${COLUMNS$date}{raw_data.ROWS + 1}', '">= " & LEFT($A{row},8)'),
+                                c('raw_data!${COLUMNS$date}2:${COLUMNS$date}{raw_data.ROWS + 1}', '"<= " & RIGHT($A{row},8)')
+                            )
                             if (!is.null(filter_column)) {
-                                return(stringr::str_glue('=SUMIFS(raw_data!{column}$2:{column}${raw_data.ROWS + 1}, raw_data!${COLUMNS$date}2:${COLUMNS$date}{raw_data.ROWS + 1},">= " & LEFT($A{row},8), raw_data!${COLUMNS$date}2:${COLUMNS$date}{raw_data.ROWS + 1},"<= " & RIGHT($A{row},8), raw_data!${COLUMNS[[filter_column]]}2:${COLUMNS[[filter_column]]}{raw_data.ROWS + 1},  IF($B$1="total", "*", $B$1))'))
-                            } else {
-                                return(stringr::str_glue('=SUMIFS(raw_data!{column}$2:{column}${raw_data.ROWS + 1}, raw_data!${COLUMNS$date}2:${COLUMNS$date}{raw_data.ROWS + 1},">= " & LEFT($A{row},8), raw_data!${COLUMNS$date}2:${COLUMNS$date}{raw_data.ROWS + 1},"<= " & RIGHT($A{row},8))'))
+                                filters <- append(filters, list(c('raw_data!${COLUMNS[[filter_column]]}2:${COLUMNS[[filter_column]]}{raw_data.ROWS + 1}', 'IF($B$1="total", "*", $B$1)')))
                             }
+                            return(stringr::str_glue(xlsx.SUMIFS('raw_data!{column}$2:{column}${raw_data.ROWS + 1}', filters)))
                         }), 
                         lapply(calculated_values, function(fml) {
                             return(fml(row))
