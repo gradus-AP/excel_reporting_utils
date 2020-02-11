@@ -19,16 +19,16 @@ excel形式でのレポート作成用ライブラリです。
 
 ## Reference
 
-#### `excel_reporting_manager$updateReports(wb, raw_data)`
+#### `excel_reporting_manager$bindRawData(wb, rawData)`
 
 説明
 
-Workbookオブジェクトにレポートを追加します。
+Workbookオブジェクトに元データをバインドし、レポートを追加します.
 
 引数 
 
-- *wb* : Workbookオブジェクト
-- *raw_data* : 元データ
+- *wb* : (必須)Workbookオブジェクト
+- *rawData* : (必須)元データ
 
 #### `excel_reporting_manager$addSummaryReport(metric, calculated_values, segment_column)`
 
@@ -38,9 +38,10 @@ Workbookオブジェクトにレポートを追加します。
 
 引数 
 
-- *metric* : (必須)合計対象の列名を指定します。
-- *calculated_values* : (省略可)計算指標を指定します。
-- *segment_column* : (省略可)セグメント別に分ける識別子に用いる列名を指定します。
+- *raw_data_sheet* : (既定値 raw_data)集計するシート名を指定します.
+- *metric* : (必須)合計対象の列名を指定します.
+- *calculated_values* : (省略可)計算指標を指定します.
+- *segment_column* : (省略可)セグメント別に分ける識別子に用いる列名を指定します.
 
 ```r
 source('./excel_reporting_utils/excel_reporting_manager.R', encoding="utf-8")
@@ -55,9 +56,10 @@ access <- data.frame(
 
 erm <- excel_reporting_manager()
 
-# アクセスデータの列名を設定する
-erm$setRawDataColumnsMapping(
-    list(
+# nameは元データの名前(省略時raw_data)
+erm$addRawData(
+    name='access',
+    mapping=list(
         date='date',# 日付(yyyymmdd)
         referer='referer',
         session='session',
@@ -67,6 +69,7 @@ erm$setRawDataColumnsMapping(
 
 # サマリーレポートの定義
 erm$addSummaryReport(
+    raw_data_sheet='access',
     metric=c('session', 'users'),
     calculated_values=list(
         'session_per_user'=function(row) {
@@ -76,12 +79,12 @@ erm$addSummaryReport(
     segment_column='referer'
 )
 
-erm$addRawData()
-
 # Workbookオブジェクトを作成
 wb <- openxlsx::createWorkbook()
 
-erm$updateReports(wb, access)
+# 元データをバインド 
+erm$bindRawData(wb, list(access=access))
+
 openxlsx::saveWorkbook(wb, 'report.xlsx', overwrite = TRUE)
 
 ```
@@ -95,18 +98,19 @@ report.xlsx
 | yahoo	| 35 | 	20 | 1.75 |
 | total	| 105 | 60	| 1.75 |
 
-#### `excel_reporting_manager$addDuringReport(metric, calculated_values, during_list, filter_column)`
+#### `excel_reporting_manager$addDuringReport(raw_data_sheet, metric, calculated_values, during_list, filter_column)`
 
 説明
 
-期間毎レポートを定義します。
+期間毎レポートを定義します.
 
 引数
 
-- *metric* : (必須)合計対象の列名を指定します。
-- *calculated_values* : (省略可)計算指標を指定します。
-- *during_list* : (必須) 集計期間を指定します。
-- *filter_column* : (省略可)フィルターに使用する列名を指定します。
+- *raw_data_sheet* : (既定値 raw_data)集計するシート名を指定します.
+- *metric* : (必須)合計対象の列名を指定します.
+- *calculated_values* : (省略可)計算指標を指定します.
+- *during_list* : (必須) 集計期間を指定します.
+- *filter_column* : (省略可)フィルターに使用する列名を指定します.
 
 ```r
 source('./excel_reporting_utils/excel_reporting_manager.R', encoding="utf-8")
@@ -121,9 +125,10 @@ access <- data.frame(
 
 erm <- excel_reporting_manager()
 
-# アクセスデータの列名を設定する
-erm$setRawDataColumnsMapping(
-    list(
+# nameは元データの名前(省略時raw_data)
+erm$addRawData(
+    name='access',
+    mapping=list(
         date='date',# 日付(yyyymmdd)
         referer='referer',
         session='session',
@@ -133,6 +138,7 @@ erm$setRawDataColumnsMapping(
 
 # 期間レポートの定義
 erm$addDuringReport(
+    raw_data_sheet='access',
     metric=c('session'),
     calculated_values=list(
         'accumulation_session'=function(row) {
@@ -149,13 +155,15 @@ erm$addDuringReport(
     filter_column='referer'
 )
 
-erm$addRawData()
-
 # Workbookオブジェクトを作成
 wb <- openxlsx::createWorkbook()
 
-erm$updateReports(wb, access)
+# 元データをバインド 
+erm$bindRawData(wb, list(access=access))
+
+# report.xlsxが出力される
 openxlsx::saveWorkbook(wb, 'report.xlsx', overwrite = TRUE)
+
 ```
 
 report.xlsx
@@ -183,4 +191,4 @@ git clone https://github.com/gradus-AP/excel_reporting_utils.git
 
 ## License
 
-excel_reporting_utils under [MIT license](https://en.wikipedia.org/wiki/MIT_License), see LICENSE.txt.
+excel_reporting_utils under [MIT license](https://en.wikipedia.org/wiki/MIT_License), see [LICENSE.txt](./LICENSE.txt).

@@ -4,6 +4,7 @@
 #' 
 #' @import 
 #' - `openxlsx 4.1.3`
+#' - `stringr 1.4.0`
 #' ---------------------------------------------------------------------------
 library(tidyverse)
 config <- list(
@@ -11,9 +12,9 @@ config <- list(
     wd = 'PATH_TO_WORK_DIRECTORY',
     access=list(
         # xlsx形式の元データのパス
-        RAW_DATA.PATH='{PATH_TO_SAMPLE_DIRECTORY}/blog_access.xlsx',
+        RAW_DATA.PATH='./sample/blog_access.xlsx',
         # 出力先xlsxパス
-        REPORT_PATH='./report.xlsx'
+        REPORT_PATH='./sample/report.xlsx'
     )
 )
 
@@ -31,9 +32,9 @@ init <- function() {
 
 erm <- excel_reporting_manager()
 
-# 元データの列を定義する
-erm$setRawDataColumnsMapping(
-    list(
+# nameは元データの名前(省略時raw_data)
+erm$addRawData(
+    mapping=list(
         date='日付',# 日付(yyyymmdd)
         referer='参照元',
         session='セッション',
@@ -71,10 +72,8 @@ erm$addDuringReport(
         during4=c('20200122', '20200128'),
         during5=c('20200129', '20200131')
     ),
-    segment_column='referer'
+    filter_column='referer'
 )
-
-erm$addRawData()
 
 # Workbookオブジェクトをxlsx形式で保存
 save <- function(wb) {
@@ -88,7 +87,7 @@ reporting <- function(raw_data, init, updates, save) {
     wb <- init()
     
     # シートを更新
-    erm$updateReports(wb, raw_data)
+    erm$bindRawData(wb, raw_data)
     
     # 保存
     save(wb)
