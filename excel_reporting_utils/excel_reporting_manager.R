@@ -11,9 +11,10 @@ excel_reporting_manager <- function() {
     # 表の先頭行を書き込む
     writeHeader <- function(sheetName, header) {
         return(function(wb) {
-            df <- as.list(rep(0, length(header)))
-            names(df) <- header
-            openxlsx::writeData(wb, sheetName, data.frame(df), startRow = START_ROW - 1)
+            for (colNamme in header) {
+                openxlsx::writeData(wb, sheetName, colNamme, startRow = START_ROW - 1, startCol = startCol - 1)
+                startCol <- startCol + 1
+            }
         })
     }
     
@@ -40,15 +41,25 @@ excel_reporting_manager <- function() {
     }
     
     # サマリーレポートを作成する
-    addSummaryReport <- function(raw_data_sheet='raw_data', metric, calculated_values=list(), segment_column=NULL, filter_column=NULL) {
+    addSummaryReport <- function(
+        name='summary', 
+        raw_data_sheet='raw_data', 
+        metric, 
+        calculated_values=list(), 
+        segment_column=NULL, 
+        filter_column=NULL, 
+        filter_value='*'
+        ) {
+        name
+        filter_value
         # 元データの対応(リスト)を取得
         mapping <- mapping_list[[raw_data_sheet]]
         COLUMNS <- lapply(c(1:length(mapping)), function(i) LETTERS[[i]])
         names(COLUMNS) <- names(mapping)
         
         updateSummaryReport <- function(wb, raw_data) {
-            if(!('summary' %in% names(wb))) {
-                openxlsx::addWorksheet(wb, 'summary')
+            if(!(name %in% names(wb))) {
+                openxlsx::addWorksheet(wb, name)
             }
             raw_data.ROWS <- nrow(raw_data)
             calculated_columns <- names(calculated_values)
@@ -61,10 +72,10 @@ excel_reporting_manager <- function() {
             segment_id_list <- c(segment_id_list, 'total')
             
             #タイトル
-            writeTitle('summary', 'サマリー')(wb)
+            writeTitle(name, 'サマリー')(wb)
             # ヘッダーを記入
             header <- c(segment_column, metric, calculated_columns)
-            writeHeader('summary',  header)(wb)
+            writeHeader(name,  header)(wb)
             
             # 集計表
             formula_list <- function(row) {
@@ -88,20 +99,26 @@ excel_reporting_manager <- function() {
             }
             
             for (fml in formula_list(c(START_ROW:(length(segment_id_list) + START_ROW - 1)))) {
-                openxlsx::writeFormula(wb, 'summary', fml, startCol=startCol, startRow=START_ROW)
+                openxlsx::writeFormula(wb, name, fml, startCol=startCol, startRow=START_ROW)
                 startCol = startCol + 1
             }
             
             # セグメント識別子をA列に記入
-            openxlsx::writeData(wb, 'summary', segment_id_list, startCol = 1, startRow = START_ROW)
+            openxlsx::writeData(wb, name, segment_id_list, startCol = 1, startRow = START_ROW)
             # filter
-            openxlsx::writeData(wb, 'summary', '*', startCol = 2, startRow = 1)
+            openxlsx::writeData(wb, name, filter_value, startCol = 2, startRow = 1)
         }
         updates <<- add(updates, list(f=updateSummaryReport, raw_data_sheet=raw_data_sheet))
     }
     
     # 期間レポートを作成する
-    addDuringReport <- function(raw_data_sheet='raw_data', metric, calculated_values=list(), during_list, filter_column=NULL) {
+    addDuringReport <- function(
+        raw_data_sheet='raw_data', 
+        metric, 
+        calculated_values=list(), 
+        during_list, 
+        filter_column=NULL
+        ) {
         # 元データの対応(リスト)を取得
         mapping <- mapping_list[[raw_data_sheet]]
         COLUMNS <- lapply(c(1:length(mapping)), function(i) LETTERS[[i]])
@@ -147,20 +164,71 @@ excel_reporting_manager <- function() {
             
             # 期間列をA列に記入
             during_list_str <- sapply(during_list, function(during) {
-                    return(stringr::str_glue('{during[1]}_{during[2]}'))
-                })
+                return(stringr::str_glue('{during[1]}_{during[2]}'))
+            })
             openxlsx::writeData(wb, 'transition', during_list_str, startCol = 1, startRow = START_ROW)
         }
         updates <<- add(updates, list(f=updateDuringReport, raw_data_sheet=raw_data_sheet))
     }
     
-    addRawData <- function(name='raw_data', mapping) {
+    # Pivot集計
+    addPivotTable <- function(
+        raw_data_sheet='raw_data', metric, calculated_values=list(), segment_column=NULL, filter_column=NULL, filter_values) {
+        
+        MAX_COLUMN <- length(metric) + length(calculated_values) + 1
+        mapping <- mapping_list[[raw_data_sheet]]
+        
+        updatePivotTable <- function(wb, raw_data) {
+            if(!('PivotTable' %in% names(wb))) {
+                openxlsx::addWorksheet(wb, 'PivotTable')
+            }
+            
+            segment_id_list <- NULL
+            if (!is.null(segment_column)) {
+                # セグメント識別子(リスト)
+                segment_id_list <- as.character(sort(unlist(unique(raw_data[,mapping[[segment_column]]]))))
+            }
+            segment_id_list <- c(segment_id_list, 'total')
+            
+            formula_list <- function(row) {
+                return(
+                    lapply(filter_values, function(column) {
+                        return(stringr::str_glue("=VLOOKUP(A{row}, '{column}'!$A$2:${LETTERS[[MAX_COLUMN]]}${length(segment_id_list) + 2}, MATCH($B$1, '{column}'!$B$2:${LETTERS[[MAX_COLUMN]]}$2, 0)+1, FALSE)"))
+                    })
+                )
+            }
+            
+            for (fml in formula_list(c(START_ROW:(length(segment_id_list) + START_ROW - 1)))) {
+                openxlsx::writeFormula(wb, 'PivotTable', fml, startCol=startCol, startRow=START_ROW)
+                startCol = startCol + 1
+            }
+            
+            # ヘッダーを記入
+            writeHeader('PivotTable', c(segment_column, filter_values))(wb)
+            
+            # metric
+            openxlsx::writeData(wb, 'PivotTable', metric[1], startCol=2, startRow=1)
+            
+            # セグメント識別子をA列に記入
+            openxlsx::writeData(wb, 'PivotTable', segment_id_list, startCol=1, startRow=START_ROW)
+        }
+        
+        updates <<- add(updates, list(f=updatePivotTable, raw_data_sheet=raw_data_sheet))
+        for (val in filter_values) {
+            addSummaryReport(name=val, 'raw_data', metric, calculated_values, segment_column, filter_column, filter_value=val)
+        }
+    }
+    
+    addRawData <- function(
+        name='raw_data', 
+        mapping
+        ) {
         .mapping <- list(1)
         names(.mapping) <- name
         .mapping[[name]] <- mapping 
         mapping_list <<- append(mapping_list, .mapping)
         
-        updateRaeData <- function(wb, raw_data) {
+        updateRawData <- function(wb, raw_data) {
             if(!(name %in% names(wb))) {
                 openxlsx::addWorksheet(wb, name)
             }
@@ -168,7 +236,7 @@ excel_reporting_manager <- function() {
             openxlsx::writeData(wb, raw_data, sheet=name)
         }
         
-        updates <<- add(updates, list(f=updateRaeData, raw_data_sheet=name))
+        updates <<- add(updates, list(f=updateRawData, raw_data_sheet=name))
     }
     
     bindRawData <- function(wb, rawData) {
@@ -182,10 +250,11 @@ excel_reporting_manager <- function() {
             (update[['f']])(wb, .rawData[[update[['raw_data_sheet']]]])
         }
     }
-
+    
     return(list(
         addSummaryReport=addSummaryReport,
         addDuringReport=addDuringReport,
+        addPivotTable=addPivotTable,
         addRawData=addRawData,
         bindRawData=bindRawData
     ))

@@ -37,6 +37,7 @@ erm$addRawData(
     mapping=list(
         date='日付',# 日付(yyyymmdd)
         referer='参照元',
+        user_type='ユーザー タイプ',
         session='セッション',
         users='ユーザー',
         page_views='ページビュー数'
@@ -73,6 +74,22 @@ erm$addDuringReport(
         during5=c('20200129', '20200131')
     ),
     filter_column='referer'
+)
+
+# pivot table
+erm$addPivotTable(
+    metric=c('session', 'users', 'page_views'),
+    calculated_values=list(
+        'page_view_per_session'=function(row) {
+            return(str_glue('=IFERROR(D{row} / B{row}, "-")'))
+        },
+        'page_view_per_user'=function(row) {
+            return(str_glue('=IFERROR(D{row} / C{row}, "-")'))
+        }
+    ),
+    segment_column='referer',
+    filter_column='user_type',
+    filter_values=c('New Visitor', 'Returning Visitor') 
 )
 
 # Workbookオブジェクトをxlsx形式で保存

@@ -10,6 +10,15 @@ excel形式でのレポート作成用ライブラリです。
 
 ---
 
+## Install
+
+つぎのコマンドをターミナル上で実行してください。
+
+```bash
+git clone https://github.com/gradus-AP/excel_reporting_utils.git
+```
+---
+
 ## Requirement
 
 - [openxlsx 4.1.3](https://www.rdocumentation.org/packages/openxlsx/versions/4.1.3)
@@ -19,18 +28,7 @@ excel形式でのレポート作成用ライブラリです。
 
 ## Reference
 
-#### `excel_reporting_manager$bindRawData(wb, rawData)`
-
-説明
-
-Workbookオブジェクトに元データをバインドし、レポートを追加します.
-
-引数 
-
-- *wb* : (必須)Workbookオブジェクト
-- *rawData* : (必須)元データ
-
-#### `excel_reporting_manager$addSummaryReport(metric, calculated_values, segment_column)`
+#### `excel_reporting_manager$addSummaryReport`
 
 説明
 
@@ -38,10 +36,13 @@ Workbookオブジェクトに元データをバインドし、レポートを追
 
 引数 
 
-- *raw_data_sheet* : (既定値 raw_data)集計するシート名を指定します.
+- *name* : (既定値 summary)集計結果シート名を指定します.
+- *raw_data_sheet* : (既定値 raw_data)集計対象シート名を指定します.
 - *metric* : (必須)合計対象の列名を指定します.
 - *calculated_values* : (省略可)計算指標を指定します.
 - *segment_column* : (省略可)セグメント別に分ける識別子に用いる列名を指定します.
+- *filter_column* : (省略可)集計行のフィルター列を指定します.
+- *filter_value* : (既定値 *)集計行のフィルター値を指定します.
 
 ```r
 source('./excel_reporting_utils/excel_reporting_manager.R', encoding="utf-8")
@@ -98,7 +99,7 @@ report.xlsx
 | yahoo	| 35 | 	20 | 1.75 |
 | total	| 105 | 60	| 1.75 |
 
-#### `excel_reporting_manager$addDuringReport(raw_data_sheet, metric, calculated_values, during_list, filter_column)`
+#### `excel_reporting_manager$addDuringReport`
 
 説明
 
@@ -177,15 +178,39 @@ report.xlsx
 | 20200122_20200128	| 25	| 94 |
 | 20200129_20200131	| 11	| 105 |
 
----
+#### `excel_reporting_manager$addPivotTable`
 
-## Install
+ピボット集計を定義します.
 
-つぎのコマンドをターミナル上で実行してください。
+引数
 
-```bash
-git clone https://github.com/gradus-AP/excel_reporting_utils.git
-```
+- *raw_data_sheet* : (既定値 raw_data)集計対象シート名を指定します.
+- *metric* : (必須)合計対象の列名を指定します.
+- *calculated_values* : (省略可)計算指標を指定します.
+- *segment_column* : (必須)集計行の列名を指定します.
+- *filter_column* : (必須)集計列の列名を指定します.
+- *filter_values* : (必須)列方向の識別子を指定します.
+
+
+#### `excel_reporting_manager$addRawData`
+
+元データを定義します.
+
+引数
+
+- *name* : (既定値 raw_data)元データの名前を指定します.
+- *mapping* : (必須)元データの列名とその識別子の対応付けを行います.
+
+#### `excel_reporting_manager$bindRawData`
+
+説明
+
+Workbookオブジェクトに元データをバインドし、レポートを追加します.
+
+引数 
+
+- *wb* : (必須)Workbookオブジェクト
+- *rawData* : (必須)元データ
 
 ---
 
