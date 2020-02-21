@@ -99,18 +99,18 @@ save <- function(wb) {
     openxlsx::saveWorkbook(wb, file=config$REPORT_PATH, overwrite = TRUE)
 }
 
-reporting <- function(raw_data, init, updates, save) {
+reporting <- function(raw_data, init, bindRawData, save) {
     # Workbookオブジェクトを生成
     wb <- init()
     
     # シートを更新
-    erm$bindRawData(wb, raw_data)
+    bindRawData(wb, raw_data)
     
     # 保存
     save(wb)
 }
 
-ga.raw_data <- readxl::read_excel(config$RAW_DATA.PATH, sheet=2) %>% 
-    dplyr::mutate(日付 = as.integer(format(.$日付)))
-
-reporting(ga.raw_data, init, updates, save)
+# レポート出力
+readxl::read_excel(config$RAW_DATA.PATH, sheet=2) %>% 
+    dplyr::mutate(日付 = as.integer(format(.$日付))) %>%
+    reporting(init, erm$bindRawData, save)
